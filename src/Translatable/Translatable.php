@@ -197,6 +197,62 @@ trait Translatable {
         return parent::fill($attributes);
     }
 
+    /**
+     * This scope eager loads the translations for the default and the fallback locale only.
+     * We can use this as a shortcut to improve performance in our application.
+     *
+     * @param Builder $query
+     */
+    public function scopeWithTranslation(Builder $query)
+    {
+        $query->with(['translations' => function(Relation $query){
+            $query->where($this->getTranslationsTable().'.'.$this->getLocaleKey(), $this->locale());
+            if ($this->useFallback()) {
+                return $query->orWhere($this->getTranslationsTable().'.'.$this->getLocaleKey(), $this->getFallbackLocale());
+            }
+        }]);
+    }
+
+    /**
+     * This scope filters results by checking the translation fields.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string                                $key
+     * @param string                                $value
+     * @param string                                $locale
+     *
+     * @return \Illuminate\Database\Eloquent\Builder|static
+     */
+    public function scopeWhereTranslation(Builder $query, $key, $value, $locale = null)
+    {
+        return $query->whereHas('translations', function (Builder $query) use ($key, $value, $locale) {
+            $query->where($this->getTranslationsTable().'.'.$key, $value);
+            if ($locale) {
+                $query->where($this->getTranslationsTable().'.'.$this->getLocaleKey(), $locale);
+            }
+        });
+    }
+
+    /**
+     * This scope filters results by checking the translation fields.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string                                $key
+     * @param string                                $value
+     * @param string                                $locale
+     *
+     * @return \Illuminate\Database\Eloquent\Builder|static
+     */
+    public function scopeWhereTranslationLike(Builder $query, $key, $value, $locale = null)
+    {
+        return $query->whereHas('translations', function (Builder $query) use ($key, $value, $locale) {
+            $query->where($this->getTranslationsTable().'.'.$key, 'LIKE', $value);
+            if ($locale) {
+                $query->where($this->getTranslationsTable().'.'.$this->getLocaleKey(), 'LIKE', $locale);
+            }
+        });
+    }
+
     private function getTranslationByLocaleKey($key)
     {
         foreach ($this->translations as $translation)
@@ -299,6 +355,11 @@ trait Translatable {
     private function alwaysFillable()
     {
         return App::make('config')->get('translatable::always_fillable', false);
+    }
+
+    private function getTranslationsTable()
+    {
+        return App::make($this->getTranslationModelName())->getTable();
     }
 
 }
