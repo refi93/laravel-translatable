@@ -155,6 +155,19 @@ return array(
 
 *Note: There isn't any restriction for the format of the locales. Feel free to use whatever suits you better, like "eng" instead of "en", or "el" instead of "gr".  The important is to define your locales and stick to them till the end.*
 
+### Available scopes
+
+```php
+
+// Eager loads translation relationship only for the default
+// and fallback (if enabled) locale
+Country::withTranslation()->get();
+
+// Filters countries by checking the translation against the given value 
+Country::whereTranslation('name', 'Greece')->first();
+
+// Filters countries by checking the translation against the given string with wildcards
+Country::whereTranslationLike('name', '%Gree%')->first();
 
 ## Laravel versions
 
