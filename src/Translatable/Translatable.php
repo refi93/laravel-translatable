@@ -119,7 +119,7 @@ trait Translatable {
             if (!$this->getTranslation()->$key && $this->useTranslationFallback)
             {
                 $fallback_locale = App::make('config')->get('translatable::fallback_locale');
-                return $this->getTranslation($fallback_locale)->$key.' ('.$fallback_locale.')';
+                return $this->getTranslation($fallback_locale)->$key;
             }
 
             return $this->getTranslation()->$key;
