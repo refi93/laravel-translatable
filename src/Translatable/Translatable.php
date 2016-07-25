@@ -37,7 +37,7 @@ trait Translatable {
      * @param bool|null $withFallback
      * @return Model|null
      */
-    public function getTranslation($locale = null, $withFallback = null)
+    public function getTranslation($locale = null, $withFallback = null, $appendFallbackLocale = false)
     {
         $locale = $locale ?: App::getLocale();
 
@@ -119,11 +119,29 @@ trait Translatable {
             if (!$this->getTranslation()->$key && $this->useTranslationFallback)
             {
                 $fallback_locale = App::make('config')->get('translatable::fallback_locale');
-                return $this->getTranslation($fallback_locale)->$key;
+                return $this->getTranslation($fallback_locale) ? $this->getTranslation($fallback_locale)->$key : null;
             }
 
             return $this->getTranslation()->$key;
         }
+        return parent::getAttribute($key);
+    }
+
+    public function getFallbackSafeAttribute($key)
+    {
+        $locale = App::getLocale();
+        
+        if ($this->isKeyReturningTranslationText($key))
+        {
+            if ((!$this->getTranslation($locale, false) || !$this->getTranslation($locale, false)->$key) && $this->useTranslationFallback)
+            {
+                $fallback_locale = App::make('config')->get('translatable::fallback_locale');
+                return '('.$fallback_locale.') '.$this->getAttribute($key);
+            }
+
+            return $this->getAttribute($key);
+        }
+
         return parent::getAttribute($key);
     }
 
