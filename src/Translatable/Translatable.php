@@ -207,9 +207,9 @@ trait Translatable
 
     public function getFallbackSafeAttribute($key)
     {
-        $locale = App::getLocale();
+        $locale = $this->locale();
         
-        if ($this->isKeyReturningTranslationText($key)) {
+        if ($this->isTranslationAttribute($key)) {
             if ((!$this->getTranslation($locale, false) || !$this->getTranslation($locale, false)->$key) && $this->useTranslationFallback) {
                 $fallback_locale = App::make('config')->get('translatable::fallback_locale');
                 return '('.$fallback_locale.') '.$this->getAttribute($key);
