@@ -179,6 +179,22 @@ trait Translatable
         return parent::getAttribute($key);
     }
 
+    public function getFallbackSafeAttribute($key)
+    {
+        $locale = App::getLocale();
+        
+        if ($this->isKeyReturningTranslationText($key)) {
+            if ((!$this->getTranslation($locale, false) || !$this->getTranslation($locale, false)->$key) && $this->useTranslationFallback) {
+                $fallback_locale = App::make('config')->get('translatable::fallback_locale');
+                return '('.$fallback_locale.') '.$this->getAttribute($key);
+            }
+
+            return $this->getAttribute($key);
+        }
+
+        return parent::getAttribute($key);
+    }
+
     /**
      * @param string $key
      * @param mixed  $value
