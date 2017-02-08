@@ -72,10 +72,30 @@ return [
     |
     | A fallback locale is the locale being used to return a translation
     | when the requested translation is not existing. To disable it
-    | set it to false.
+    | set it to false. It should be defined for each language.
     |
     */
+    
     'fallback_locale' => 'sk',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fallback Locales Cascade
+    |--------------------------------------------------------------------------
+    |
+    | A fallback locales cascade should be specified for each used locale, 
+    | at least an empty array. It specifies the fallback sequence when the
+    | translation for the selected locale is not available. It is used
+    | in special calls carrying the suffic "Cascade" - see Translatable.php.
+    |
+    |
+    */
+
+    'fallback_locales_cascade' => [
+      'sk' => ['cs', 'en'],
+      'en' => ['sk', 'cs'],
+      'cs' => ['sk', 'en'],
+    ],
 
     /*
     |--------------------------------------------------------------------------

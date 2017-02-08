@@ -80,6 +80,35 @@ trait Translatable
 
     /**
      * @param string|null $locale
+     * @param bool        $withFallback
+     *
+     * added support for cascaded fallback
+     *
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function getTranslationCascaded($locale = null, $withFallback = null)
+    {
+        $locale = $locale ?: $this->locale();
+        $withFallback = $withFallback === null ? $this->useFallback() : $withFallback;
+        $fallbackLocalesCascade = $this->getFallbackLocalesCascade($locale);
+
+        if ($translation = $this->getTranslationByLocaleKey($locale)) {
+            return $translation;
+        }
+
+        if ($withFallback && $fallbackLocalesCascade) {
+            foreach ($fallbackLocalesCascade as $fallbackLocale) {
+                if ($translation = $this->getTranslationByLocaleKey($fallbackLocale)) {
+                    return $translation;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param string|null $locale
      *
      * @return bool
      */
@@ -212,10 +241,13 @@ trait Translatable
             return $this->getTranslation($locale, false)->$key;
         }
         
-        $fallback_locale = $this->getFallbackLocale();
-        $fallback_translation = $this->getTranslation($fallback_locale);
-        if ($fallback_translation) {
-            return '('.$fallback_locale.') '.$fallback_translation->$key;
+        $fallbackLocalesCascade = $this->getFallbackLocalesCascade();
+
+        foreach ($fallbackLocalesCascade as $fallbackLocale) {
+            $fallbackTranslation = $this->getTranslation($fallbackLocale);
+            if ($fallbackTranslation) {
+                return '('.$fallbackLocale.') '.$fallbackTranslation->$key;
+            }
         }
 
         return null;
@@ -339,7 +371,21 @@ trait Translatable
             }
         }
 
-        return app()->make('config')->get('translatable.fallback_locale');
+        return app()->make('config')->get('translatable.fallback_locales');
+    }
+
+    /**
+     * @param $locale
+     *
+     * Returns fallback cascade as an array for $locale
+     *
+     * @return string
+     */
+    private function getFallbackLocalesCascade($locale = null)
+    {
+        $locale = ($locale == null ? $this->locale() : $locale);
+
+        return app()->make('config')->get('translatable.fallback_locales_cascade')[$locale];
     }
 
     /**
@@ -605,6 +651,29 @@ trait Translatable
                 }
             },
         ]);
+    }
+
+    /**
+     * This scope eager loads the translations for the default and the fallback locale cascade.
+     * We can use this as a shortcut to improve performance in our application.
+     *
+     * @param Builder $query
+     */
+    public function scopeWithTranslationCascaded(Builder $query)
+    {
+        $query->with(['translations' => function (Relation $query) {
+            $query->where($this->getTranslationsTable().'.'.$this->getLocaleKey(), $this->locale());
+
+            if ($this->useFallback()) {
+                $fallbackLocaleCascade = $this->getFallbackLocaleCascade();
+                
+                foreach ($fallbackLocaleCascade as $fallbackLocale) {
+                    $query = $query->orWhere($this->getTranslationsTable().'.'.$this->getLocaleKey(), $fallbackLocale);
+                }
+
+                return $query;
+            }
+        }]);
     }
 
     /**
