@@ -211,7 +211,7 @@ class TranslatableTest extends TestsBase {
      */
     public function it_returns_default_translation()
     {
-        App::make('config')->set('translatable::fallback_locale', 'de');
+        App::make('config')->set('translatable::fallback_locale', ['ch' => ['de']]);
 
         $country = Country::find(1);
         $this->assertSame($country->getTranslation('ch', true)->name, 'Griechenland');
@@ -224,7 +224,7 @@ class TranslatableTest extends TestsBase {
      */
     public function fallback_option_in_config_overrides_models_fallback_option()
     {
-        App::make('config')->set('translatable::fallback_locale', 'de');
+        App::make('config')->set('translatable::fallback_locale', ['ch' => ['de']]);
 
         $country = Country::find(1);
         $this->assertEquals($country->getTranslation('ch', true)->locale, 'de');
@@ -244,7 +244,7 @@ class TranslatableTest extends TestsBase {
      */
     public function it_returns_null_if_fallback_is_not_defined()
     {
-        App::make('config')->set('translatable::fallback_locale', 'ch');
+        App::make('config')->set('translatable::fallback_locale', ['pl' => ['ch']]);
 
         $country = Country::find(1);
         $this->assertSame($country->getTranslation('pl', true), null);
@@ -255,7 +255,7 @@ class TranslatableTest extends TestsBase {
      */
     public function it_fills_a_non_default_language_with_fallback_set()
     {
-        App::make('config')->set('translatable::fallback_locale', 'en');
+        App::make('config')->set('translatable::fallback_locale', ['en' => ['de'], 'de' => ['en']]);
 
         $country = new Country;
         $country->fill([
@@ -272,7 +272,7 @@ class TranslatableTest extends TestsBase {
      */
     public function it_creates_a_new_translation()
     {
-        App::make('config')->set('translatable::fallback_locale', 'en');
+        App::make('config')->set('translatable::fallback_locale', ['en' => ['gr']]);
 
         $country = Country::create(['iso' => 'gr']);
         $country->getNewTranslation('en')->name = 'Greece';

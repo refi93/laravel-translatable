@@ -46,20 +46,24 @@ trait Translatable {
             $withFallback = isset($this->useTranslationFallback) ? $this->useTranslationFallback : false;
         }
 
+        $fallbackLocales = $withFallback ? App::make('config')->get('translatable::fallback_locales')[$locale] : [];
+
+        $translation = null;
+
         if ($this->getTranslationByLocaleKey($locale))
         {
             $translation = $this->getTranslationByLocaleKey($locale);
         }
-        elseif ($withFallback
-            && App::make('config')->get('translatable::fallback_locale')
-            && $this->getTranslationByLocaleKey(App::make('config')->get('translatable::fallback_locale'))
-        )
+        elseif ($withFallback)
         {
-            $translation = $this->getTranslationByLocaleKey(App::make('config')->get('translatable::fallback_locale'));
-        }
-        else
-        {
-            $translation = null;
+            foreach ($fallbackLocales as $fallbackLocale)
+            {
+              $translation = $this->getTranslationByLocaleKey($fallbackLocale);
+              if ($translation)
+              {
+                break;
+              }
+            }
         }
 
         return $translation;
@@ -118,8 +122,18 @@ trait Translatable {
             }
             if (!$this->getTranslation()->$key && $this->useTranslationFallback)
             {
-                $fallback_locale = App::make('config')->get('translatable::fallback_locale');
-                return $this->getTranslation($fallback_locale) ? $this->getTranslation($fallback_locale)->$key : null;
+                $locale = App::getLocale();
+                $fallbackLocales = App::make('config')->get('translatable::fallback_locales')[$locale];
+                
+                foreach ($fallbackLocales as $fallbackLocale)
+                {
+                  if ($this->getTranslation($fallbackLocale))
+                  {
+                    return $this->getTranslation($fallbackLocale)->$key;
+                  }
+                }
+
+                return null;
             }
 
             return $this->getTranslation()->$key;
@@ -135,8 +149,14 @@ trait Translatable {
         {
             if ((!$this->getTranslation($locale, false) || !$this->getTranslation($locale, false)->$key) && $this->useTranslationFallback)
             {
-                $fallback_locale = App::make('config')->get('translatable::fallback_locale');
-                return '('.$fallback_locale.') '.$this->getAttribute($key);
+                $fallbackLocales = App::make('config')->get('translatable::fallback_locales')[$locale];
+                foreach ($fallbackLocales as $fallbackLocale)
+                {
+                  if (($this->getTranslation($fallbackLocale, false) && $this->getTranslation($fallbackLocale, false)->$key))
+                  {
+                    return '('.$fallbackLocale.') '.$this->getAttribute($key);
+                  }
+                }
             }
 
             return $this->getAttribute($key);
