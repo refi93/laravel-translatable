@@ -514,31 +514,47 @@ trait Translatable
     /**
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @param string                                $locale
+     * @param string                                $key
      *
      * @return \Illuminate\Database\Eloquent\Builder|static
      */
-    public function scopeTranslatedIn(Builder $query, $locale = null)
+    public function scopeTranslatedIn(Builder $query, $locale = null, $key = null)
     {
         $locale = $locale ?: $this->locale();
 
         return $query->whereHas('translations', function (Builder $q) use ($locale) {
             $q->where($this->getLocaleKey(), '=', $locale);
+            if ($key) {
+                $q->where($key, '<>', '%');
+            }
         });
     }
 
     /**
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @param string                                $locale
+     * @param string                                $key
      *
      * @return \Illuminate\Database\Eloquent\Builder|static
      */
-    public function scopeNotTranslatedIn(Builder $query, $locale = null)
+    public function scopeNotTranslatedIn(Builder $query, $locale = null, $key = null)
     {
         $locale = $locale ?: $this->locale();
 
-        return $query->whereDoesntHave('translations', function (Builder $q) use ($locale) {
+        $query =  $query->whereDoesntHave('translations', function (Builder $q) use ($locale) {
             $q->where($this->getLocaleKey(), '=', $locale);
         });
+
+        if ($key) {
+            $query = $query->whereHas('translations', function (Builder $q) use ($locale) {
+                $q->where($this->getLocaleKey(), '=', $locale);
+                if ($key) {
+                    $q->where($key, '=', '%');
+                }
+            });
+        }
+
+        return $query;
     }
 
     /**
