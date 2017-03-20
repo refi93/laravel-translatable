@@ -22,7 +22,7 @@ return [
     | set it to false.
     |
     */
-    'fallback_locale' => [
+    'fallback_locales' => [
         'sk' => ['cs', 'en'],
         'en' => ['sk', 'cs'],
         'cs' => ['sk', 'en'],
