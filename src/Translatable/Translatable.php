@@ -345,7 +345,7 @@ trait Translatable
             }
         }
 
-        return app()->make('config')->get('translatable.fallback_locales');
+        return app()->make('config')->get('translatable.fallback_locale');
     }
 
     /**
