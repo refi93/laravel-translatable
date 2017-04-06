@@ -2,14 +2,14 @@
 
 use Dimsav\Translatable\Test\Model;
 use Dimsav\Translatable\Test\Model\City;
-use Dimsav\Translatable\Test\Model\CityTranslation;
 use Dimsav\Translatable\Test\Model\Company;
-use Dimsav\Translatable\Test\Model\Continent;
 use Dimsav\Translatable\Test\Model\Country;
-use Dimsav\Translatable\Test\Model\CountryGuarded;
-use Dimsav\Translatable\Test\Model\CountryStrict;
-use Dimsav\Translatable\Test\Model\CountryTranslation;
+use Dimsav\Translatable\Test\Model\Continent;
 use Dimsav\Translatable\Test\Model\Vegetable;
+use Dimsav\Translatable\Test\Model\CountryStrict;
+use Dimsav\Translatable\Test\Model\CountryGuarded;
+use Dimsav\Translatable\Test\Model\CityTranslation;
+use Dimsav\Translatable\Test\Model\CountryTranslation;
 
 class TestCoreModelExtension extends TestsBase
 {
@@ -64,8 +64,8 @@ class TestCoreModelExtension extends TestsBase
     {
         $that = $this;
         $event = App::make('events');
-        $event->listen('eloquent*', function ($model) use ($that) {
-            return get_class($model) == 'Dimsav\Translatable\Test\Model\Country' ? false : true;
+        $event->listen('eloquent*', function ($event, $models) use ($that) {
+            return get_class(reset($models)) == 'Dimsav\Translatable\Test\Model\Country' ? false : true;
         });
 
         $country = Country::find(1);
@@ -78,8 +78,8 @@ class TestCoreModelExtension extends TestsBase
     {
         $that = $this;
         $event = App::make('events');
-        $event->listen('eloquent*', function ($model) use ($that) {
-            return get_class($model) == 'Dimsav\Translatable\Test\Model\Continent' ? false : true;
+        $event->listen('eloquent*', function ($event, $models) use ($that) {
+            return get_class(reset($models)) == 'Dimsav\Translatable\Test\Model\Continent' ? false : true;
         });
 
         $continent = new Continent();
@@ -149,7 +149,7 @@ class TestCoreModelExtension extends TestsBase
         $this->assertEquals(0, count($after));
     }
 
-    public function test_to_array_returs_translated_attributes()
+    public function test_to_array_returns_translated_attributes()
     {
         $country = Country::find(1);
         $this->assertArrayHasKey('name', $country->toArray());

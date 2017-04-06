@@ -72,6 +72,7 @@ This is a Laravel package for translatable models. Its goal is to remove the com
 
  Laravel  | Translatable
 :---------|:----------
+ 5.4      | 7.*
  5.3      | 6.*
  5.2      | 5.5 - 6.*
  5.1      | 5.0 - 6.*
@@ -178,6 +179,10 @@ With this command, initialize the configuration and modify the created file, loc
 
 ## Configuration
 
+### The config file
+
+You can see the options for further customization in the [config file](src/config/translatable.php).
+
 ### The translation model
 
 The convention used to define the class of the translation model is to append the keyword `Translation`.
@@ -210,16 +215,27 @@ class Country extends Eloquent
 ### Available methods 
 
 ```php
-// Before we get started, this is how we determine the current locale.
+// Before we get started, this is how we determine the default locale.
 // It is set by laravel or other packages.
 App::getLocale(); // 'fr' 
 
 // To use this package, first we need an instance of our model
 $germany = Country::where('code', 'de')->first();
 
-// This returns an instance of CountryTranslation of using the current locale.
+// This returns an instance of CountryTranslation of using the default locale.
 // So in this case, french. If no french translation is found, it returns null.
 $translation = $germany->translate();
+
+// It is possible to define a default locale per model by overriding the model constructor.
+public function __construct(array $attributes = [])
+{
+    parent::__construct($attributes);
+    
+    $this->defaultLocale = 'de';
+}
+
+// It is also possible to define a default locale for our model on the fly:
+$germany->setDefaultLocale('de');
 
 // If an german translation exists, it returns an instance of 
 // CountryTranslation. Otherwise it returns null.
@@ -232,7 +248,7 @@ $translation = $germany->translate('de', true);
 // Alias of the above.
 $translation = $germany->translateOrDefault('de');
 
-// Returns instance of CountryTranslation of using the current locale.
+// Returns instance of CountryTranslation of using the default locale.
 // If no translation is found, it returns a fallback translation
 // if enabled in the configuration.
 $translation = $germany->getTranslation();
@@ -241,6 +257,28 @@ $translation = $germany->getTranslation();
 // CountryTranslation. Otherwise it returns null.
 // Same as $germany->translate('de');
 $translation = $germany->getTranslation('de', true);
+
+// To set the translation for a field you can either update the translation model.
+// Saving the model will also save all the related translations.
+$germany->translate('en')->name = 'Germany';
+$germany->save();
+
+// Alternatively we can use the shortcut
+$germany->{'name:en'} = 'Germany';
+$germany->save();
+
+// There are two ways of inserting mutliple translations into the database
+// First, using the locale as array key.
+$greece = $country->fill([
+    'en'  => ['name' => 'Greece'],
+    'fr'  => ['name' => 'Grèce'],
+]);
+
+// The second way is to use the following syntax.  
+$greece = $country->fill([
+    'name:en' => 'Greece',
+    'name:fr' => 'Grèce',
+]);
 
 // Returns true/false if the model has translation about the current locale. 
 $germany->hasTranslation();

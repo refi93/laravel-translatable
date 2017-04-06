@@ -1,5 +1,18 @@
 ## Version History
 
+### v. 7
+
+- Added compatibility with Laravel 5.4
+- Added default locale per model #271
+
+### v. 6.1
+
+- Filling a model now supports using the 'property:locale' format in keys. #314 For example: 
+```
+$country->fill(['name:en' => 'Belgium']);
+```  
+- Added config to skip translations in toArray() for better performance when needed. #315
+
 ### v. 6.0.1
 
 - Fix issue when trying to fetch a translation with a country based locale #264

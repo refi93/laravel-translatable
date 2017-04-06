@@ -3,19 +3,21 @@
 namespace Dimsav\Translatable;
 
 use App;
-use Dimsav\Translatable\Exception\LocalesNotDefinedException;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Dimsav\Translatable\Exception\LocalesNotDefinedException;
 
 trait Translatable
 {
+    protected $defaultLocale;
+
     /**
      * Alias for getTranslation().
      *
      * @param string|null $locale
-     * @param bool $withFallback
+     * @param bool        $withFallback
      *
      * @return \Illuminate\Database\Eloquent\Model|null
      */
@@ -182,27 +184,23 @@ trait Translatable
      */
     public function getAttribute($key)
     {
-        if (str_contains($key, ':')) {
-            list($key, $locale) = explode(':', $key);
-        } else {
-            $locale = $this->locale();
-        }
+        list($attribute, $locale) = $this->getAttributeAndLocale($key);
 
-        if ($this->isTranslationAttribute($key)) {
+        if ($this->isTranslationAttribute($attribute)) {
             if ($this->getTranslation($locale) === null) {
                 return null;
             }
 
-            // If the given $key has a mutator, we push it to $attributes and then call getAttributeValue
+            // If the given $attribute has a mutator, we push it to $attributes and then call getAttributeValue
             // on it. This way, we can use Eloquent's checking for Mutation, type casting, and
             // Date fields.
-            if ($this->hasGetMutator($key)) {
-                $this->attributes[$key] = $this->getTranslation($locale)->$key;
+            if ($this->hasGetMutator($attribute)) {
+                $this->attributes[$attribute] = $this->getTranslation($locale)->$attribute;
 
-                return $this->getAttributeValue($key);
+                return $this->getAttributeValue($attribute);
             }
 
-            return $this->getTranslation($locale)->$key;
+            return $this->getTranslation($locale)->$attribute;
         }
 
         return parent::getAttribute($key);
@@ -230,17 +228,15 @@ trait Translatable
     /**
      * @param string $key
      * @param mixed  $value
+     *
+     * @return $this
      */
     public function setAttribute($key, $value)
     {
-        if (str_contains($key, ':')) {
-            list($key, $locale) = explode(':', $key);
-        } else {
-            $locale = $this->locale();
-        }
+        list($attribute, $locale) = $this->getAttributeAndLocale($key);
 
-        if ($this->isTranslationAttribute($key)) {
-            $this->getTranslationOrNew($locale)->$key = $value;
+        if ($this->isTranslationAttribute($attribute)) {
+            $this->getTranslationOrNew($locale)->$attribute = $value;
         } else {
             return parent::setAttribute($key, $value);
         }
@@ -300,7 +296,6 @@ trait Translatable
      * @param array $attributes
      *
      * @throws \Illuminate\Database\Eloquent\MassAssignmentException
-     *
      * @return $this
      */
     public function fill(array $attributes)
@@ -309,9 +304,12 @@ trait Translatable
             if ($this->isKeyALocale($key)) {
                 $this->getTranslationOrNew($key)->fill($values);
                 unset($attributes[$key]);
-            } elseif ($this->isTranslationAttribute($key)) {
-                $this->getTranslationOrNew($this->locale())->fill([$key => $values]);
-                unset($attributes[$key]);
+            } else {
+                list($attribute, $locale) = $this->getAttributeAndLocale($key);
+                if ($this->isTranslationAttribute($attribute)) {
+                    $this->getTranslationOrNew($locale)->fill([$attribute => $values]);
+                    unset($attributes[$key]);
+                }
             }
         }
 
@@ -410,7 +408,6 @@ trait Translatable
      * @param string $key
      *
      * @throws \Dimsav\Translatable\Exception\LocalesNotDefinedException
-     *
      * @return bool
      */
     protected function isKeyALocale($key)
@@ -422,7 +419,6 @@ trait Translatable
 
     /**
      * @throws \Dimsav\Translatable\Exception\LocalesNotDefinedException
-     *
      * @return array
      */
     protected function getLocales()
@@ -569,13 +565,12 @@ trait Translatable
 
     /**
      * Adds scope to get a list of translated attributes, using the current locale.
-     *
      * Example usage: Country::listsTranslations('name')->get()->toArray()
      * Will return an array with items:
      *  [
      *      'id' => '1',                // The id of country
      *      'name' => 'Griechenland'    // The translated name
-     *  ]
+     *  ].
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @param string                                $translationField
@@ -593,7 +588,10 @@ trait Translatable
         if ($withFallback) {
             $query->orWhere(function (Builder $q) use ($translationTable, $localeKey) {
                 $q->where($translationTable.'.'.$localeKey, $this->getFallbackLocale())
-                  ->whereNotIn($translationTable.'.'.$this->getRelationKey(), function (QueryBuilder $q) use ($translationTable, $localeKey) {
+                  ->whereNotIn($translationTable.'.'.$this->getRelationKey(), function (QueryBuilder $q) use (
+                      $translationTable,
+                      $localeKey
+                  ) {
                       $q->select($translationTable.'.'.$this->getRelationKey())
                         ->from($translationTable)
                         ->where($translationTable.'.'.$localeKey, $this->locale());
@@ -610,13 +608,15 @@ trait Translatable
      */
     public function scopeWithTranslation(Builder $query)
     {
-        $query->with(['translations' => function (Relation $query) {
-            $query->where($this->getTranslationsTable().'.'.$this->getLocaleKey(), $this->locale());
+        $query->with([
+            'translations' => function (Relation $query) {
+                $query->where($this->getTranslationsTable().'.'.$this->getLocaleKey(), $this->locale());
 
-            if ($this->useFallback()) {
-                return $query->orWhere($this->getTranslationsTable().'.'.$this->getLocaleKey(), $this->getFallbackLocale());
-            }
-        }]);
+                if ($this->useFallback()) {
+                    return $query->orWhere($this->getTranslationsTable().'.'.$this->getLocaleKey(), $this->getFallbackLocale());
+                }
+            },
+        ]);
     }
 
     /**
@@ -704,6 +704,12 @@ trait Translatable
     {
         $attributes = parent::toArray();
 
+        if ($this->relationLoaded('translations') || $this->toArrayAlwaysLoadsTranslations()) {
+            // continue
+        } else {
+            return $attributes;
+        }
+
         $hiddenAttributes = $this->getHidden();
 
         foreach ($this->translatedAttributes as $field) {
@@ -720,14 +726,6 @@ trait Translatable
     }
 
     /**
-     * @return bool
-     */
-    private function alwaysFillable()
-    {
-        return app()->make('config')->get('translatable.always_fillable', false);
-    }
-
-    /**
      * @return string
      */
     private function getTranslationsTable()
@@ -740,8 +738,36 @@ trait Translatable
      */
     protected function locale()
     {
+        if ($this->defaultLocale) {
+            return $this->defaultLocale;
+        }
+
         return app()->make('config')->get('translatable.locale')
             ?: app()->make('translator')->getLocale();
+    }
+
+    /**
+     * Set the default locale on the model.
+     *
+     * @param $locale
+     *
+     * @return $this
+     */
+    public function setDefaultLocale($locale)
+    {
+        $this->defaultLocale = $locale;
+
+        return $this;
+    }
+
+    /**
+     * Get the default locale on the model.
+     *
+     * @return mixed
+     */
+    public function getDefaultLocale()
+    {
+        return $this->defaultLocale;
     }
 
     /**
@@ -762,5 +788,27 @@ trait Translatable
         // we need to manually "reload" the collection built from the relationship
         // otherwise $this->translations()->get() would NOT be the same as $this->translations
         $this->load('translations');
+    }
+
+    /**
+     * @param $key
+     *
+     * @return array
+     */
+    private function getAttributeAndLocale($key)
+    {
+        if (str_contains($key, ':')) {
+            return explode(':', $key);
+        }
+
+        return [$key, $this->locale()];
+    }
+
+    /**
+     * @return bool
+     */
+    private function toArrayAlwaysLoadsTranslations()
+    {
+        return app()->make('config')->get('translatable.to_array_always_loads_translations', true);
     }
 }
