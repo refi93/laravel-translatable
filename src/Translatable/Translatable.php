@@ -368,11 +368,14 @@ trait Translatable {
         return (in_array($key, $this->translatedAttributes) || parent::__isset($key));
     }
 
-    public function scopeTranslatedIn(Builder $query, $locale)
+    public function scopeTranslatedIn(Builder $query, $locale, $key = null)
     {
-        return $query->whereHas('translations', function(Builder $q) use ($locale)
+        return $query->whereHas('translations', function(Builder $q) use ($locale, $key)
         {
             $q->where($this->getLocaleKey(), '=', $locale);
+            if ($key) {
+                $q->where($key, '<>', '%');
+            }
         });
     }
 
