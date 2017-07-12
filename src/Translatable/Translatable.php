@@ -374,7 +374,7 @@ trait Translatable {
         {
             $q->where($this->getLocaleKey(), '=', $locale);
             if ($key) {
-                $q->where($key, '<>', '%');
+                $q->where($key, '!=', '');
             }
         });
     }
