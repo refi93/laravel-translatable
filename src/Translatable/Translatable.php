@@ -521,7 +521,7 @@ trait Translatable
         return $query->whereHas('translations', function (Builder $q) use ($locale, $key) {
             $q->where($this->getLocaleKey(), '=', $locale);
             if ($key) {
-                $q->where($key, '<>', '%');
+                $q->where($key, '!=', '');
             }
         });
     }
@@ -545,7 +545,7 @@ trait Translatable
             $query = $query->whereHas('translations', function (Builder $q) use ($locale) {
                 $q->where($this->getLocaleKey(), '=', $locale);
                 if ($key) {
-                    $q->where($key, '=', '%');
+                    $q->where($key, '=', '');
                 }
             });
         }
