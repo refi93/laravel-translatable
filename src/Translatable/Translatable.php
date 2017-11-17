@@ -61,17 +61,17 @@ trait Translatable
         $configFallbackLocale = $this->getFallbackLocale();
         $locale = $locale ?: $this->locale();
         $withFallback = $withFallback === null ? $this->useFallback() : $withFallback;
-        $fallbackLocale = $this->getFallbackLocale($locale);
+        $fallbackLocalesCascade = $this->getFallbackLocalesCascade($locale);
 
         if ($translation = $this->getTranslationByLocaleKey($locale)) {
             return $translation;
         }
-        if ($withFallback && $fallbackLocale) {
-            if ($translation = $this->getTranslationByLocaleKey($fallbackLocale)) {
-                return $translation;
-            }
-            if ($translation = $this->getTranslationByLocaleKey($configFallbackLocale)) {
-                return $translation;
+
+        if ($withFallback && $fallbackLocalesCascade) {
+            foreach ($fallbackLocalesCascade as $fallbackLocale) {
+                if ($translation = $this->getTranslationByLocaleKey($fallbackLocale)) {
+                    return $translation;
+                }
             }
         }
 
@@ -195,14 +195,12 @@ trait Translatable
      */
     private function getAttributeOrFallback($locale, $attribute)
     {
-        $translation = $this->getTranslation($locale);
+        $value = $this->getTranslation($locale)->$attribute;
 
         $usePropertyFallback = $this->useFallback() && $this->usePropertyFallback();
-        if (is_null($translation) && $usePropertyFallback) {
+        if (empty($translation) && $usePropertyFallback) {
             return $this->getTranslation($this->getFallbackLocale(), true)->$attribute;
         }
-
-        $value = $translation->$attribute;
 
         return $value;
     }
