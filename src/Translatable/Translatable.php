@@ -186,23 +186,20 @@ trait Translatable
     }
 
     /**
-     * Returns the attribute value from fallback translation if value of attribute
+     * Orinally returned the attribute value from fallback translation if value of attribute
      * is empty and the property fallback is enabled in the configuration.
      * in model.
+     *
+     * overriden for Planeat, because some translations may have empty attributes
      * @param $locale
      * @param $attribute
      * @return mixed
      */
     private function getAttributeOrFallback($locale, $attribute)
     {
-        $value = $this->getTranslation($locale)->$attribute;
+        $translation = $this->getTranslation($locale);
 
-        $usePropertyFallback = $this->useFallback() && $this->usePropertyFallback();
-        if (empty($translation) && $usePropertyFallback) {
-            return $this->getTranslation($this->getFallbackLocale(), true)->$attribute;
-        }
-
-        return $value;
+        return $translation ? $translation->$attribute : null;
     }
 
     /**
